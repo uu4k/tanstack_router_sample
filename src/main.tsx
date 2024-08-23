@@ -17,7 +17,17 @@ const rootRoute = createRootRoute({
     <>
       <div>
         <Link to="/">index</Link>|<Link to="/about">about</Link>|
-        <Link to="/posts">posts</Link>
+        {/* searchパラメータなしは怒られる */}
+        {/* <Link to="/posts"></Link> */}
+        <Link to="/posts" search={{ page: 1, sort: "newest" }}>
+          posts
+        </Link>|
+        <Link to="/posts" search={{ page: 2, sort: "newest" }}>
+          posts(2page)
+        </Link>|
+        <Link to="/posts" search={{ page: 1, sort: "oldest" }}>
+          posts(oldest)
+        </Link>
       </div>
       <hr />
       <Outlet />
@@ -48,20 +58,40 @@ const postsRoute = createRoute({
   path: "posts",
 });
 
+type PostSortOptions = "newest" | "oldest";
+type PostSearch = {
+  page: number;
+  sort: PostSortOptions;
+};
+
 const postsIndexRoute = createRoute({
   getParentRoute: () => postsRoute,
   // Notice the single slash `/` here
   path: "/",
+  validateSearch: (search: Record<string, unknown>): PostSearch => {
+    // validate and parse the search params into a typed state
+    return {
+      page: Number(search?.page ?? 1),
+      sort: (search?.sort as PostSortOptions) || "newest",
+    };
+  },
   component: () => {
+    const { page, sort } = postsIndexRoute.useSearch();
+    const startId =
+      sort == "newest" ? 1 + (page - 1) * 10 : 100 - (page - 1) * 10;
     return (
       <div>
-        <Link to="/posts/$postId" params={{ postId: "1" }}>
-          1
-        </Link>
-        ,
-        <Link to="/posts/$postId" params={{ postId: "2" }}>
-          2
-        </Link>
+        {[...Array(10)].map((_, i) => {
+          const id = sort == "newest" ? startId + i : startId - i;
+          return (
+            <>
+              <Link to="/posts/$postId" params={{ postId: id.toString() }}>
+                {id}
+              </Link>
+              ,
+            </>
+          );
+        })}
       </div>
     );
   },
